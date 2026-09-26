@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>প্রপোজাল 💌</title>
+<link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;600;700&family=Dancing+Script:wght@700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --pink1:#ffe4ef; --pink2:#ffb6d5; --pink3:#ff7eb3; --pink4:#e6478d; --deep:#c0286a;
+  --white:#fffafd;
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;}
+body{
+  font-family:'Hind Siliguri',sans-serif;
+  background:linear-gradient(160deg,var(--pink1),var(--pink2) 60%,var(--pink3));
+  min-height:100%;
+  padding-top:env(safe-area-inset-top,0);
+  padding-bottom:env(safe-area-inset-bottom,0);
+  overflow-x:hidden;
+  color:#6b1440;
+}
+.wrap{
+  min-height:100vh; min-height:100dvh;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  padding:32px 18px; text-align:center; position:relative;
+}
+.hearts{position:fixed; inset:0; pointer-events:none; overflow:hidden; z-index:0;}
+.heart{position:absolute; bottom:-10%; font-size:28px; opacity:.75; animation:float linear infinite;}
+@keyframes float{
+  0%{transform:translateY(0) rotate(0deg); opacity:0;}
+  10%{opacity:.8;}
+  100%{transform:translateY(-115vh) rotate(25deg); opacity:0;}
+}
+.card{
+  position:relative; z-index:1; background:rgba(255,250,253,.85);
+  border-radius:28px; padding:36px 26px; max-width:440px; width:100%;
+  box-shadow:0 20px 50px rgba(192,40,106,.25); backdrop-filter:blur(6px);
+  animation:pop .6s ease;
+}
+@keyframes pop{from{transform:scale(.85); opacity:0;} to{transform:scale(1); opacity:1;}}
+h1{font-family:'Dancing Script',cursive; font-size:2.6em; color:var(--deep); margin:0 0 6px;}
+h2{font-family:'Dancing Script',cursive; font-size:2em; color:var(--deep); margin:0 0 14px;}
+.big-emoji{font-size:5em; margin:10px 0; animation:bounce 2.4s ease-in-out infinite;}
+@keyframes bounce{0%,100%{transform:translateY(0) scale(1);} 50%{transform:translateY(-14px) scale(1.08);}}
+p.sub{font-size:1.05em; line-height:1.6; color:#8a2c5c; margin:0 0 22px;}
+.btn{
+  display:inline-block; border:none; cursor:pointer; font-family:inherit;
+  font-size:1.05em; font-weight:700; color:#fff; padding:15px 30px;
+  border-radius:50px; background:linear-gradient(135deg,var(--pink4),var(--deep));
+  box-shadow:0 10px 22px rgba(192,40,106,.4); margin:8px; transition:transform .15s;
+}
+.btn:active{transform:scale(.94);}
+.btn.ghost{background:#fff; color:var(--deep); border:2px solid var(--pink3); box-shadow:none;}
+.options{display:flex; flex-direction:column; gap:14px; margin-top:8px;}
+.opt-emoji{
+  display:block; width:100%; font-size:1.15em; font-weight:700; color:var(--deep);
+  background:#fff; border:2px solid var(--pink2); border-radius:20px; padding:18px 14px;
+  cursor:pointer; box-shadow:0 8px 18px rgba(192,40,106,.15); transition:transform .15s, background .2s;
+}
+.opt-emoji .em{font-size:1.8em; display:block; margin-bottom:4px;}
+.opt-emoji:active{transform:scale(.96); background:var(--pink1);}
+.sound-toggle{
+  position:fixed; top:calc(14px + env(safe-area-inset-top,0)); right:14px; z-index:5;
+  background:#fff; border:none; border-radius:50%; width:46px; height:46px; font-size:1.3em;
+  box-shadow:0 6px 16px rgba(192,40,106,.3); cursor:pointer;
+}
+.link-box{
+  background:#fff; border:2px dashed var(--pink3); border-radius:16px; padding:12px 14px;
+  word-break:break-all; font-size:.85em; color:var(--deep); margin:16px 0;
+}
+textarea{
+  width:100%; min-height:110px; border-radius:16px; border:2px solid var(--pink2);
+  padding:14px; font-family:inherit; font-size:1em; color:#6b1440; resize:vertical;
+  outline:none; margin-bottom:14px;
+}
+textarea:focus{border-color:var(--pink4);}
+.result-badge{font-size:1em; color:#8a2c5c; margin-top:6px;}
+.msg-preview{
+  background:#fff0f6; border-left:4px solid var(--pink4); border-radius:10px;
+  padding:12px 14px; text-align:left; font-size:.95em; color:#6b1440; margin:14px 0;
+}
+footer.note{font-size:.75em; color:#a85a86; margin-top:10px;}
+</style>
+</head>
+<body>
+<div class="hearts" id="hearts"></div>
+<button class="sound-toggle" id="soundBtn" title="মিউজিক">🔇</button>
+<div class="wrap"><div class="card" id="app"></div></div>
+
+<script>
+/* ---------- floating hearts background ---------- */
+const heartsEl=document.getElementById('hearts');
+const heartEmojis=['💗','💕','💖','🌸','💞'];
+for(let i=0;i<18;i++){
+  const h=document.createElement('div');
+  h.className='heart';
+  h.textContent=heartEmojis[Math.floor(Math.random()*heartEmojis.length)];
+  h.style.left=Math.random()*100+'%';
+  h.style.animationDuration=(9+Math.random()*10)+'s';
+  h.style.animationDelay=(Math.random()*10)+'s';
+  h.style.fontSize=(18+Math.random()*22)+'px';
+  heartsEl.appendChild(h);
+}
+
+/* ---------- gentle music-box love melody via WebAudio (self-contained) ---------- */
+let audioCtx=null, master=null, delayNode=null, melodyTimer=null, musicOn=false;
+const scale=[523.25,659.25,783.99,1046.50,987.77,783.99,659.25,587.33]; // C5 E5 G5 C6 B5 G5 E5 D5
+let noteIdx=0;
+
+function setupAudio(){
+  audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+  master=audioCtx.createGain(); master.gain.value=0.16; master.connect(audioCtx.destination);
+
+  // soft warm pad underneath
+  [261.63,329.63,392.00].forEach((f,i)=>{
+    const osc=audioCtx.createOscillator(); osc.type='sine'; osc.frequency.value=f;
+    const g=audioCtx.createGain(); g.gain.value=0;
+    osc.connect(g); g.connect(master); osc.start();
+    g.gain.linearRampToValueAtTime(0.05,audioCtx.currentTime+3+i);
+  });
+
+  // gentle echo/reverb-ish delay for the melody
+  delayNode=audioCtx.createDelay(); delayNode.delayTime.value=0.34;
+  const feedback=audioCtx.createGain(); feedback.gain.value=0.38;
+  const delayFilter=audioCtx.createBiquadFilter(); delayFilter.type='lowpass'; delayFilter.frequency.value=1800;
+  delayNode.connect(delayFilter); delayFilter.connect(feedback); feedback.connect(delayNode);
+  delayNode.connect(master);
+}
+
+function playNote(freq){
+  const t=audioCtx.currentTime;
+  const osc=audioCtx.createOscillator(); osc.type='triangle'; osc.frequency.value=freq;
+  const g=audioCtx.createGain();
+  g.gain.setValueAtTime(0.0001,t);
+  g.gain.exponentialRampToValueAtTime(0.22,t+0.04);
+  g.gain.exponentialRampToValueAtTime(0.0001,t+1.3);
+  osc.connect(g); g.connect(master); g.connect(delayNode);
+  osc.start(t); osc.stop(t+1.35);
+}
+
+function startMelody(){
+  if(melodyTimer) return;
+  melodyTimer=setInterval(()=>{ playNote(scale[noteIdx%scale.length]); noteIdx++; },560);
+  playNote(scale[noteIdx%scale.length]); noteIdx++;
+}
+function stopMelody(){ clearInterval(melodyTimer); melodyTimer=null; }
+
+function toggleMusic(){
+  musicOn=!musicOn;
+  document.getElementById('soundBtn').textContent=musicOn?'🔊':'🔇';
+  if(musicOn){
+    if(!audioCtx) setupAudio();
+    if(audioCtx.state==='suspended') audioCtx.resume();
+    startMelody();
+  }else{
+    stopMelody();
+    if(audioCtx) audioCtx.suspend();
+  }
+}
+document.getElementById('soundBtn').onclick=toggleMusic;
+
+/* ---------- app state / routing ---------- */
+const app=document.getElementById('app');
+const params=new URLSearchParams(location.search);
+const resultCode=params.get('res');
+const resultMsg=params.get('msg')||'';
+
+function esc(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+
+const RESULT_TEXT={
+  a:{title:'সে "হ্যাঁ" বলেছে! 💍😍',body:'সে প্রপোজাল এক্সেপ্ট করেছে! আজ থেকে দুটো হৃদয় একসাথে পথ চলা শুরু করলো। 🥰💞'},
+  n1:{title:'উত্তর: না 😢',body:'কারণ হিসেবে সে বলেছে — "তাকে ভালো লাগে না" 🫠😫'},
+  n2:{title:'উত্তর: না 😢',body:'কারণ হিসেবে সে বলেছে — "আমি সিঙ্গেল না" ✅🙏'},
+  n3:{title:'উত্তর: না 😢',body:'কারণ হিসেবে সে বলেছে — "সে দেখতে খারাপ" 👍😵'},
+  f1:{title:'বন্ধুত্ব 🤝',body:'সে বলেছে — "আমরা বন্ধু হিসেবে থাকতে চাই" 🥰'},
+  f2:{title:'বেস্ট ফ্রেন্ড! 🥰😘',body:'সে বলেছে — "আমরা আজ থেকে বেস্ট ফ্রেন্ড হিসেবে থাকবো" 😘'}
+};
+
+function shareLink(code,message){
+  const url=new URL(location.href);
+  const sp=new URLSearchParams();
+  sp.set('res',code);
+  if(message) sp.set('msg',message);
+  url.search=sp.toString();
+  return url.toString();
+}
+
+function render(view){
+  app.innerHTML='';
+  if(view==='result' && RESULT_TEXT[resultCode]){
+    const r=RESULT_TEXT[resultCode];
+    app.innerHTML=`
+      <div class="big-emoji">🎀</div>
+      <h1>প্রপোজাল রেজাল্ট</h1>
+      <h2>${r.title}</h2>
+      <p class="sub">${r.body}</p>
+      ${resultMsg?`<div class="msg-preview">💌 তার মনের কথা:<br>${esc(resultMsg)}</div>`:''}
+      <button class="btn ghost" onclick="location.href=location.pathname">নতুন করে দেখুন</button>
+    `;
+    return;
+  }
+  if(view==='intro'){
+    app.innerHTML=`
+      <div class="big-emoji">💌</div>
+      <h1>একটা বিশেষ প্রশ্ন আছে...</h1>
+      <p class="sub">তোমার জন্য একটা ছোট্ট সারপ্রাইজ অপেক্ষা করছে 🌸</p>
+      <button class="btn" id="nextBtn">নেক্সট পেজ ➜</button>
+    `;
+    document.getElementById('nextBtn').onclick=()=>{ if(!musicOn) toggleMusic(); render('main'); };
+    return;
+  }
+  if(view==='main'){
+    app.innerHTML=`
+      <h1>প্রপোজাল 💘</h1>
+      <p class="sub">তোমার উত্তরটা বেছে নাও...</p>
+      <div class="options">
+        <button class="opt-emoji" data-go="accept"><span class="em">💍😍</span>প্রপোজ এক্সেপ্ট</button>
+        <button class="opt-emoji" data-go="notaccept"><span class="em">💔😢</span>নট এক্সেপ্ট</button>
+        <button class="opt-emoji" data-go="friend"><span class="em">🤝🌸</span>ফ্রেন্ডশিপ এক্সেপ্ট</button>
+      </div>
+    `;
+    app.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>render(b.dataset.go));
+    return;
+  }
+  if(view==='accept'){
+    showMessageStep('a',RESULT_TEXT.a.title,RESULT_TEXT.a.body);
+    return;
+  }
+  if(view==='notaccept'){
+    app.innerHTML=`
+      <h2>কেন না? 🥺</h2>
+      <div class="options">
+        <button class="opt-emoji" data-code="n1"><span class="em">🫠😫</span>তাকে ভালো লাগে না</button>
+        <button class="opt-emoji" data-code="n2"><span class="em">✅🙏</span>আমি সিঙ্গেল না</button>
+        <button class="opt-emoji" data-code="n3"><span class="em">👍😵</span>সে দেখতে খারাপ</button>
+      </div>
+    `;
+    app.querySelectorAll('[data-code]').forEach(b=>b.onclick=()=>{
+      const r=RESULT_TEXT[b.dataset.code];
+      showMessageStep(b.dataset.code,r.title,r.body);
+    });
+    return;
+  }
+  if(view==='friend'){
+    app.innerHTML=`
+      <h2>বন্ধুত্ব 🌸</h2>
+      <div class="options">
+        <button class="opt-emoji" data-code="f1"><span class="em">🥰</span>আমরা বন্ধু হিসেবে থাকতে চাই</button>
+        <button class="opt-emoji" data-code="f2"><span class="em">🥰😘</span>আমরা আজ থেকে বেস্ট ফ্রেন্ড হিসেবে থাকবো</button>
+      </div>
+    `;
+    app.querySelectorAll('[data-code]').forEach(b=>b.onclick=()=>{
+      const r=RESULT_TEXT[b.dataset.code];
+      showMessageStep(b.dataset.code,r.title,r.body);
+    });
+    return;
+  }
+}
+
+function showMessageStep(code,title,body){
+  app.innerHTML=`
+    <div class="big-emoji">✍️</div>
+    <h2>${title}</h2>
+    <p class="sub">${body}</p>
+    <p class="sub" style="margin-bottom:8px;">শেয়ার লিংক বানানোর আগে তোমার মনের কথাটা লিখে যাও 💭</p>
+    <textarea id="msgBox" placeholder="তোমার মনের কথা এখানে লিখো..."></textarea>
+    <button class="btn" id="submitMsg">সাবমিট করো 💌</button><br>
+    <button class="btn ghost" id="skipMsg">স্কিপ করো</button>
+  `;
+  const go=(msg)=>finish(code,title,body,msg);
+  document.getElementById('submitMsg').onclick=()=>go(document.getElementById('msgBox').value.trim());
+  document.getElementById('skipMsg').onclick=()=>go('');
+}
+
+function finish(code,title,body,message){
+  const link=shareLink(code,message);
+  app.innerHTML=`
+    <div class="big-emoji">🎉</div>
+    <h2>${title}</h2>
+    <p class="sub">${body}</p>
+    ${message?`<div class="msg-preview">💌 তোমার মনের কথা:<br>${esc(message)}</div>`:''}
+    <p class="result-badge">নিচের লিংকটা শেয়ার করো, যে কেউ ক্লিক করলেই এই রেজাল্ট দেখতে পাবে 👇</p>
+    <div class="link-box" id="linkBox">${link}</div>
+    <button class="btn" id="copyBtn">লিংক কপি করো 📋</button><br>
+    <button class="btn ghost" onclick="render('main')">আবার শুরু করো</button>
+  `;
+  document.getElementById('copyBtn').onclick=async ()=>{
+    try{ await navigator.clipboard.writeText(link); document.getElementById('copyBtn').textContent='কপি হয়ে গেছে! ✅'; }
+    catch(e){
+      const range=document.createRange(); range.selectNode(document.getElementById('linkBox'));
+      window.getSelection().removeAllRanges(); window.getSelection().addRange(range);
+    }
+  };
+}
+
+if(resultCode && RESULT_TEXT[resultCode]){
+  render('result');
+}else{
+  render('intro');
+}
+</script>
+</body>
+</html>
